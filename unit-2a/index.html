@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dictation Practice - Listening & Writing Application</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom animations */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-effect {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+        .shake-animation {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-200">
+                    <i class="fa-solid font-bold fa-headphones text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-slate-900 leading-tight">Dictation Challenge</h1>
+                    <p class="text-xs text-slate-500 font-medium">Master Vocabulary Listening</p>
+                </div>
+            </div>
+            <button id="restart-btn" onclick="app.restartApp()" class="hidden flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>Restart</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-2xl w-full mx-auto p-4 sm:p-6 flex-grow flex flex-col justify-center">
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="bg-white p-6 sm:p-10 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 text-center transition-all">
+            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner">
+                <i class="fa-solid fa-spell-check"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3">Vocabulary Dictation</h2>
+            <p class="text-slate-600 text-sm sm:text-base mb-6 max-w-md mx-auto leading-relaxed">
+                Test and improve your English spelling and listening skill. Listen carefully to the pronunciation and fill in the missing words.
+            </p>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-8 text-left text-sm text-slate-600 space-y-2">
+                <div class="flex items-center gap-2 font-semibold text-slate-800 mb-1">
+                    <i class="fa-solid fa-circle-info text-indigo-500"></i> Rules & Guidelines:
+                </div>
+                <p>• Listen to female standard slow voice for each question.</p>
+                <p>• Type the exact vocabulary according to letter length placeholders.</p>
+                <p>• Press <kbd class="px-2 py-0.5 bg-slate-200 border border-slate-300 rounded text-xs">Enter</kbd> to check your answer instantly.</p>
+                <p>• Maximum 3 mistakes allowed per sentence before answer reveals.</p>
+            </div>
+            <button onclick="app.startPractice()" class="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-lg rounded-xl shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 transition-all transform hover:-translate-y-0.5">
+                Start Dictation Session <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+
+        <!-- Practice Screen -->
+        <div id="practice-screen" class="hidden space-y-6">
+            <!-- Progress Bar & Status -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2">
+                <div class="flex justify-between items-center text-sm font-semibold">
+                    <span id="question-counter" class="text-indigo-600">Question 1 of 19</span>
+                    <span id="mistake-counter" class="text-slate-500 text-xs sm:text-sm">Attempts Left: <span class="font-bold text-amber-600">3/3</span></span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                    <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 5%"></div>
+                </div>
+            </div>
+
+            <!-- Main Question Card -->
+            <div class="bg-white p-6 sm:p-10 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 text-center relative overflow-hidden">
+                <!-- Instruction Header -->
+                <div class="mb-6">
+                    <span class="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider mb-2">Dictation Task</span>
+                    <h2 class="text-base sm:text-lg font-bold text-slate-800">Dictation – Listen and write what you hear</h2>
+                </div>
+
+                <!-- Big Audio Button -->
+                <div class="my-6 flex justify-center items-center">
+                    <button id="audio-btn" onclick="app.playAudio()" class="group relative w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-tr from-indigo-600 to-indigo-500 rounded-full flex flex-col items-center justify-center text-white shadow-xl shadow-indigo-200 hover:shadow-2xl hover:shadow-indigo-300 transition-all transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-300">
+                        <i class="fa-solid fa-volume-high text-2xl sm:text-3xl group-hover:scale-110 transition-transform"></i>
+                        <span class="text-xs font-semibold mt-1 tracking-wide opacity-90">LISTEN</span>
+                    </button>
+                </div>
+
+                <!-- Interactive Inline Input Container -->
+                <div class="my-8">
+                    <div id="inline-input-container" class="flex flex-wrap justify-center items-center gap-x-6 gap-y-4 py-4 px-2">
+                        <!-- Dynamic letter inputs grouped by word will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="mt-6 space-y-4 max-w-md mx-auto">
+                    <button id="check-btn" onclick="app.checkAnswer()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold rounded-xl shadow-md transition-all">
+                        Check Answer
+                    </button>
+
+                    <!-- Reveal Answer Box (Hidden by default) -->
+                    <div id="reveal-box" class="hidden p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-center text-sm space-y-3">
+                        <div class="font-bold flex items-center justify-center gap-2 text-amber-900">
+                            <i class="fa-solid fa-lightbulb text-amber-500"></i> Answer Revealed:
+                        </div>
+                        <p class="text-2xl font-black text-indigo-950 tracking-wider" id="revealed-text"></p>
+                        <button onclick="app.nextQuestion()" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition text-center shadow">
+                            Continue to Next Question <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+
+                    <!-- Next Question Action (Appears after Correct Answer) -->
+                    <div id="success-box" class="hidden space-y-3">
+                        <div id="feedback-toast" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold rounded-xl text-center text-lg flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                            <span id="feedback-text">Well done!</span>
+                        </div>
+                        <button onclick="app.nextQuestion()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-xl shadow-md transition-all">
+                            Next Question <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden bg-white p-6 sm:p-10 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 text-center">
+            <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner">
+                <i class="fa-solid fa-award"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">Practice Completed!</h2>
+            <p class="text-slate-500 text-sm sm:text-base mb-6">Here is your detailed performance summary:</p>
+
+            <!-- Score Cards Grid -->
+            <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
+                <div class="bg-slate-50 border border-slate-200 p-3 sm:p-4 rounded-xl">
+                    <span class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</span>
+                    <span id="stat-total" class="text-xl sm:text-2xl font-black text-slate-800">19</span>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 p-3 sm:p-4 rounded-xl">
+                    <span class="block text-xs font-semibold text-emerald-600 uppercase tracking-wider">Correct</span>
+                    <span id="stat-correct" class="text-xl sm:text-2xl font-black text-emerald-700">0</span>
+                </div>
+                <div class="bg-rose-50 border border-rose-200 p-3 sm:p-4 rounded-xl">
+                    <span class="block text-xs font-semibold text-rose-600 uppercase tracking-wider">Incorrect</span>
+                    <span id="stat-incorrect" class="text-xl sm:text-2xl font-black text-rose-700">0</span>
+                </div>
+            </div>
+
+            <!-- Detailed Breakdown List -->
+            <div class="text-left mb-8">
+                <h3 class="font-bold text-slate-800 mb-3 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-indigo-500"></i> Question Details:
+                </h3>
+                <div id="result-details-list" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                    <!-- Dynamic details appended here -->
+                </div>
+            </div>
+
+            <button onclick="app.restartApp()" class="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-xl shadow-lg shadow-indigo-200 transition-all">
+                Practice Again <i class="fa-solid fa-rotate-right ml-2"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-4 text-center text-xs text-slate-400">
+        Dictation Practice Web App • GitHub Pages Ready
+    </footer>
+
+    <script>
+        // Vocabulary dataset provided by specification
+        const RAW_VOCABULARY = [
+            { term: "achieve", pos: "(v)" },
+            { term: "arrive", pos: "(v)" },
+            { term: "be interested in", pos: "" },
+            { term: "believe", pos: "(v)" },
+            { term: "build", pos: "(v)" },
+            { term: "company", pos: "(n)" },
+            { term: "crowd", pos: "(n)" },
+            { term: "decide", pos: "(v)" },
+            { term: "earn", pos: "(v)" },
+            { term: "effect", pos: "(n)" },
+            { term: "enough", pos: "" },
+            { term: "expensive", pos: "(a)" },
+            { term: "experience", pos: "(n)" },
+            { term: "organization", pos: "(n)" },
+            { term: "plan", pos: "(v)" },
+            { term: "practice", pos: "(v)" },
+            { term: "pursue", pos: "(v)" },
+            { term: "smart", pos: "(a)" },
+            { term: "technology", pos: "(n)" }
+        ];
+
+        // Sound Effects synthesizer
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+
+            playCorrect() {
+                this.init();
+                if (!this.ctx) return;
+                
+                const now = this.ctx.currentTime;
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc1.type = 'triangle';
+                osc2.type = 'sine';
+
+                osc1.frequency.setValueAtTime(659.25, now);
+                osc1.frequency.setValueAtTime(880.00, now + 0.1);
+
+                osc2.frequency.setValueAtTime(659.25, now);
+                osc2.frequency.setValueAtTime(880.00, now + 0.1);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.4);
+                osc2.stop(now + 0.4);
+            }
+
+            playWrong() {
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.25);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        // Main App Controller
+        class DictationApp {
+            constructor() {
+                this.questions = [];
+                this.currentIndex = 0;
+                this.currentAttempts = 3;
+                this.results = [];
+                this.sfx = new SoundEffects();
+                this.praisePhrases = ["Well done!", "Good job!", "Excellent!", "Very good!"];
+                this.femaleVoice = null;
+                this.letterInputs = [];
+
+                this.bindUIElements();
+                this.initSpeechSynthesis();
+            }
+
+            bindUIElements() {
+                this.screens = {
+                    start: document.getElementById('start-screen'),
+                    practice: document.getElementById('practice-screen'),
+                    result: document.getElementById('result-screen')
+                };
+
+                this.ui = {
+                    restartBtn: document.getElementById('restart-btn'),
+                    counter: document.getElementById('question-counter'),
+                    mistakeCounter: document.getElementById('mistake-counter'),
+                    progressBar: document.getElementById('progress-bar'),
+                    inputContainer: document.getElementById('inline-input-container'),
+                    checkBtn: document.getElementById('check-btn'),
+                    revealBox: document.getElementById('reveal-box'),
+                    revealedText: document.getElementById('revealed-text'),
+                    successBox: document.getElementById('success-box'),
+                    feedbackText: document.getElementById('feedback-text'),
+                    statTotal: document.getElementById('stat-total'),
+                    statCorrect: document.getElementById('stat-correct'),
+                    statIncorrect: document.getElementById('stat-incorrect'),
+                    resultDetailsList: document.getElementById('result-details-list')
+                };
+            }
+
+            initSpeechSynthesis() {
+                if ('speechSynthesis' in window) {
+                    const loadVoices = () => {
+                        const voices = window.speechSynthesis.getVoices();
+                        this.femaleVoice = voices.find(v => 
+                            v.lang.startsWith('en') && 
+                            (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Google US English') || v.name.includes('Karen') || v.name.includes('Victoria'))
+                        ) || voices.find(v => v.lang.startsWith('en')) || null;
+                    };
+
+                    loadVoices();
+                    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                        window.speechSynthesis.onvoiceschanged = loadVoices;
+                    }
+                }
+            }
+
+            shuffle(array) {
+                const arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            startPractice() {
+                this.questions = this.shuffle(RAW_VOCABULARY);
+                this.currentIndex = 0;
+                this.results = [];
+
+                this.screens.start.classList.add('hidden');
+                this.screens.result.classList.add('hidden');
+                this.screens.practice.classList.remove('hidden');
+                this.ui.restartBtn.classList.remove('hidden');
+
+                this.loadQuestion();
+            }
+
+            loadQuestion() {
+                this.currentAttempts = 3;
+                const currentData = this.questions[this.currentIndex];
+
+                // Update Progress UI
+                this.ui.counter.textContent = `Question ${this.currentIndex + 1} of ${this.questions.length}`;
+                this.ui.mistakeCounter.innerHTML = `Attempts Left: <span class="font-bold text-amber-600">${this.currentAttempts}/3</span>`;
+                const progressPercent = ((this.currentIndex + 1) / this.questions.length) * 100;
+                this.ui.progressBar.style.width = `${progressPercent}%`;
+
+                // Build Interactive Character Input Boxes directly on screen
+                this.renderInlineInputs(currentData.term);
+
+                // Controls reset
+                this.ui.checkBtn.disabled = false;
+                this.ui.checkBtn.classList.remove('hidden');
+                this.ui.revealBox.classList.add('hidden');
+                this.ui.successBox.classList.add('hidden');
+
+                // Auto Play Audio
+                setTimeout(() => {
+                    this.playAudio();
+                }, 300);
+            }
+
+            renderInlineInputs(term) {
+                this.ui.inputContainer.innerHTML = '';
+                this.letterInputs = [];
+
+                const words = term.split(' ');
+
+                words.forEach((word, wordIndex) => {
+                    const wordGroup = document.createElement('div');
+                    wordGroup.className = 'flex items-center gap-1 sm:gap-2';
+
+                    for (let i = 0; i < word.length; i++) {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.maxLength = 1;
+                        input.autocomplete = 'off';
+                        input.autocorrect = 'off';
+                        input.autocapitalize = 'off';
+                        input.spellcheck = false;
+                        input.className = 'w-9 h-12 sm:w-11 sm:h-14 text-center text-xl sm:text-2xl font-black text-indigo-950 uppercase bg-slate-50 border-b-4 border-indigo-400 focus:border-indigo-600 focus:bg-indigo-50/50 outline-none transition-all rounded-t-md shadow-sm';
+
+                        // Key handling for letter-by-letter typing experience
+                        input.addEventListener('keydown', (e) => this.handleKeyNavigation(e, input));
+                        input.addEventListener('input', (e) => this.handleInputAdvance(e, input));
+
+                        wordGroup.appendChild(input);
+                        this.letterInputs.push(input);
+                    }
+
+                    this.ui.inputContainer.appendChild(wordGroup);
+                });
+
+                // Focus first input automatically
+                setTimeout(() => {
+                    if (this.letterInputs.length > 0) {
+                        this.letterInputs[0].focus();
+                    }
+                }, 100);
+            }
+
+            handleInputAdvance(e, currentInput) {
+                const index = this.letterInputs.indexOf(currentInput);
+                const val = currentInput.value;
+
+                if (val.length > 0) {
+                    // Move to next input box if available
+                    if (index < this.letterInputs.length - 1) {
+                        this.letterInputs[index + 1].focus();
+                        this.letterInputs[index + 1].select();
+                    }
+                }
+            }
+
+            handleKeyNavigation(e, currentInput) {
+                const index = this.letterInputs.indexOf(currentInput);
+
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!this.ui.successBox.classList.contains('hidden') || !this.ui.revealBox.classList.contains('hidden')) {
+                        this.nextQuestion();
+                    } else {
+                        this.checkAnswer();
+                    }
+                } else if (e.key === 'Backspace') {
+                    if (currentInput.value === '' && index > 0) {
+                        e.preventDefault();
+                        this.letterInputs[index - 1].focus();
+                        this.letterInputs[index - 1].value = '';
+                    }
+                } else if (e.key === 'ArrowLeft' && index > 0) {
+                    e.preventDefault();
+                    this.letterInputs[index - 1].focus();
+                    this.letterInputs[index - 1].select();
+                } else if (e.key === 'ArrowRight' && index < this.letterInputs.length - 1) {
+                    e.preventDefault();
+                    this.letterInputs[index + 1].focus();
+                    this.letterInputs[index + 1].select();
+                }
+            }
+
+            getUserInput() {
+                const currentTerm = this.questions[this.currentIndex].term;
+                const words = currentTerm.split(' ');
+                let userWords = [];
+                let currIdx = 0;
+
+                words.forEach(word => {
+                    let w = '';
+                    for (let i = 0; i < word.length; i++) {
+                        w += (this.letterInputs[currIdx].value || ' ').toLowerCase();
+                        currIdx++;
+                    }
+                    userWords.push(w.trim());
+                });
+
+                return userWords.join(' ').toLowerCase();
+            }
+
+            playAudio() {
+                if (!('speechSynthesis' in window)) {
+                    return;
+                }
+
+                window.speechSynthesis.cancel();
+
+                const currentTerm = this.questions[this.currentIndex].term;
+                const utterance = new SpeechSynthesisUtterance(currentTerm);
+                
+                utterance.rate = 0.75;
+                utterance.pitch = 1.1;
+                utterance.lang = 'en-US';
+
+                if (this.femaleVoice) {
+                    utterance.voice = this.femaleVoice;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            }
+
+            checkAnswer() {
+                const userInput = this.getUserInput();
+                const currentItem = this.questions[this.currentIndex];
+                const correctAnswer = currentItem.term.toLowerCase();
+
+                if (userInput === correctAnswer) {
+                    // Correct Answer
+                    this.sfx.playCorrect();
+                    
+                    const isFirstTryCorrect = (this.currentAttempts === 3);
+                    this.results[this.currentIndex] = {
+                        item: currentItem,
+                        correct: isFirstTryCorrect
+                    };
+
+                    this.letterInputs.forEach(input => {
+                        input.disabled = true;
+                        input.classList.remove('border-indigo-400');
+                        input.classList.add('border-emerald-500', 'bg-emerald-50', 'text-emerald-900');
+                    });
+
+                    const randomPraise = this.praisePhrases[Math.floor(Math.random() * this.praisePhrases.length)];
+                    this.ui.feedbackText.textContent = randomPraise;
+                    
+                    this.ui.checkBtn.classList.add('hidden');
+                    this.ui.successBox.classList.remove('hidden');
+
+                } else {
+                    // Incorrect Answer
+                    this.sfx.playWrong();
+                    this.currentAttempts--;
+
+                    if (!this.results[this.currentIndex]) {
+                        this.results[this.currentIndex] = {
+                            item: currentItem,
+                            correct: false
+                        };
+                    }
+
+                    // Shake animation on inputs container
+                    this.ui.inputContainer.classList.add('shake-animation');
+                    setTimeout(() => this.ui.inputContainer.classList.remove('shake-animation'), 500);
+
+                    if (this.currentAttempts > 0) {
+                        this.ui.mistakeCounter.innerHTML = `Attempts Left: <span class="font-bold text-rose-600">${this.currentAttempts}/3</span>`;
+                        // Reset input boxes values for re-entry
+                        this.letterInputs.forEach(input => input.value = '');
+                        if (this.letterInputs.length > 0) {
+                            this.letterInputs[0].focus();
+                        }
+                    } else {
+                        // Out of attempts - Reveal answer
+                        this.ui.mistakeCounter.innerHTML = `<span class="font-bold text-rose-600">Out of attempts!</span>`;
+                        this.letterInputs.forEach(input => input.disabled = true);
+                        this.ui.checkBtn.classList.add('hidden');
+                        
+                        this.ui.revealedText.textContent = `${currentItem.term} ${currentItem.pos}`;
+                        this.ui.revealBox.classList.remove('hidden');
+                    }
+                }
+            }
+
+            nextQuestion() {
+                this.currentIndex++;
+                if (this.currentIndex < this.questions.length) {
+                    this.loadQuestion();
+                } else {
+                    this.showResults();
+                }
+            }
+
+            showResults() {
+                this.screens.practice.classList.add('hidden');
+                this.screens.result.classList.remove('hidden');
+
+                const total = this.questions.length;
+                let correctCount = 0;
+
+                this.ui.resultDetailsList.innerHTML = '';
+
+                this.questions.forEach((q, idx) => {
+                    const res = this.results[idx];
+                    const isCorrect = res && res.correct;
+
+                    if (isCorrect) correctCount++;
+
+                    const detailItem = document.createElement('div');
+                    detailItem.className = `p-3 rounded-lg border flex justify-between items-center text-sm ${
+                        isCorrect ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'
+                    }`;
+
+                    detailItem.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                            }">${idx + 1}</span>
+                            <div>
+                                <span class="font-bold text-slate-800">${q.term} ${q.pos}</span>
+                            </div>
+                        </div>
+                        <span class="font-bold text-xs uppercase px-2 py-1 rounded ${
+                            isCorrect ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'
+                        }">
+                            ${isCorrect ? 'Correct' : 'Incorrect'}
+                        </span>
+                    `;
+
+                    this.ui.resultDetailsList.appendChild(detailItem);
+                });
+
+                const incorrectCount = total - correctCount;
+
+                this.ui.statTotal.textContent = total;
+                this.ui.statCorrect.textContent = correctCount;
+                this.ui.statIncorrect.textContent = incorrectCount;
+            }
+
+            restartApp() {
+                window.speechSynthesis.cancel();
+                this.screens.practice.classList.add('hidden');
+                this.screens.result.classList.add('hidden');
+                this.ui.restartBtn.classList.add('hidden');
+                this.screens.start.classList.remove('hidden');
+            }
+        }
+
+        // Initialize application
+        let app;
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new DictationApp();
+        });
+    </script>
+</body>
+</html>
